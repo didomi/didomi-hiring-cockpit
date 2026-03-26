@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hiring Manager Cockpit — Didomi</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Inter',system-ui,sans-serif;background:#0f0f1a;min-height:100vh;color:#e2e8f0}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState}=React;
+const STAGES=[
+  {id:"screening",label:"CV Screening",icon:"📋",color:"#6366f1"},
+  {id:"hr",label:"HR Interview",icon:"🙋‍♀️",color:"#8b5cf6"},
+  {id:"hm",label:"HM Interview",icon:"🎯",color:"#3b82f6"},
+  {id:"case",label:"Case Study",icon:"📝",color:"#06b6d4"},
+  {id:"team",label:"Team Interview",icon:"👥",color:"#10b981",optional:true},
+  {id:"founder",label:"VP/Founder",icon:"🚀",color:"#f59e0b"},
+  {id:"offer",label:"Offer / Ref Check",icon:"🎉",color:"#ef4444"},
+  {id:"bgcheck",label:"Background Check",icon:"🔍",color:"#64748b"},
+];
+const STAGE_INFO={
+  screening:{title:"CV Screening",body:"AI-assisted initial screening, but Carla reviews and validates every application. No decisions are made by AI alone — compliant with EU AI Act & GDPR. The Candidate Experience Guide is sent before the HR Interview so every candidate receives the AI disclosure upfront.",owner:"Carla",duration:"A few days"},
+  hr:{title:"HR Interview",body:"Carla screens every candidate — even employee referrals. 15 minutes, always in English. You don't need to be present. Carla will share feedback and move the candidate forward if they pass.",owner:"Carla",duration:"15 min · English only"},
+  hm:{title:"Hiring Manager Interview",body:"Two-way conversation: assess skills & team fit, but also sell Didomi and the role. Use your scorecard questions. May be conducted in the local language — Carla confirms in advance.",owner:"You",duration:"30–45 min"},
+  case:{title:"Case Study / Technical Test",body:"You prepare the brief. Candidates have 1 week to complete it by default — be flexible if they need more time due to work commitments, discuss with Carla. Presentation attended by you and relevant team members — HR not present. Candidates may use AI tools but must disclose.",owner:"You + Team",duration:"1 week (flexible) + presentation"},
+  team:{title:"Team & Cross-Functional Interviews",body:"Optional stage — use it when broader perspective would help. Bring in teammates from other departments. Keep it structured around the scorecard. Submit all feedback in Lever promptly.",owner:"You + Team",duration:"Multiple sessions (optional)"},
+  founder:{title:"VP / Founder Interview",body:"Always the last interview step, always a separate session, always 30 minutes. Carla schedules this. Ensure the candidate is fully briefed and prepared before this stage.",owner:"VP / Founder",duration:"30 min · Always last"},
+  offer:{title:"Offer, Reference Check",body:"Share your final recommendation with Carla. Only Carla discusses salary, contracts, and offer terms. Reference checks are conducted by Carla where applicable. Do not make informal offers.",owner:"Carla (lead) + You",duration:"1–2 weeks"},
+  bgcheck:{title:"Background Check (Certn)",body:"Mandatory for all hires except interns & apprentices. Triggered automatically in Certn when candidate status is set to 'Offer Accepted' in Lever — sends OneID + SoftCheck™. US Base Criminal must be initiated manually by Carla for US-entity hires. US-based candidates are handled fully manually. Annual re-checks apply to all employees in scope.",owner:"Carla",duration:"Post-offer · All roles except interns"},
+};
+const CHECKLIST={
+  "Open a Role":[
+    {text:"Budget approved by CFO & CEO",link:"https://www.notion.so/27ba859d703546d5a9668b5dcabc8d8b"},
+    {text:"Job requisition created in Lever"},
+    {text:"Kick-off meeting with Carla scheduled",link:"https://www.notion.so/65a87e826e934e0093eef46847938581"},
+    {text:"Scorecard defined",link:"https://www.notion.so/3b217a919ad047ec8623dee46b89e809"},
+    {text:"Role posted internally on #general Slack (3 weeks)"},
+    {text:"Onboarding buddy volunteer identified"},
+    {text:"Compensation benchmarked via Figures with Carla"},
+  ],
+  "During Interviews":[
+    {text:"Review CV & scorecard before each interview"},
+    {text:"Show up on time — candidates notice"},
+    {text:"Use structured, scorecard-based questions"},
+    {text:"Log feedback in Lever after every interview"},
+    {text:"No personal/illegal questions (age, health, family)"},
+    {text:"Carla schedules all interviews & sends case studies"},
+    {text:"Case Study: 1 week default — be flexible if needed"},
+    {text:"Case Study presentation: invite relevant team, no HR"},
+  ],
+  "Making the Offer":[
+    {text:"Share your final decision with Carla"},
+    {text:"Only Carla discusses salary, contracts & offer details"},
+    {text:"Reference check done if applicable (Carla leads)"},
+    {text:"Do NOT make informal promises or off-Lever offers"},
+  ],
+  "Onboarding Prep":[
+    {text:"Onboarding checklist started",link:"https://www.notion.so/4215465ca1ef433e8e781bec06c91e01"},
+    {text:"Intro meetings & calendar organised for Day 1"},
+    {text:"Laptop choice made (check Equipment policy)"},
+    {text:"Optional Paris Week 1 discussed with new hire"},
+    {text:"Farah sends onboarding plan ahead of Day 1"},
+    {text:"Background check cleared in Certn before contract sent (non-interns)"},
+  ],
+};
+const INTERVIEW_TIPS=[
+  {stage:"HR Interview",duration:"15 min · English only",owner:"Carla",tip:"Carla screens all candidates first — even referrals. No action needed from you yet."},
+  {stage:"HM Interview",duration:"30–45 min · Local language OK",owner:"You",tip:"Sell the role AND Didomi. It's as much about them choosing you as you choosing them. Stick to scorecard questions."},
+  {stage:"Case Study",duration:"1 week default (flexible)",owner:"You",tip:"Prepare the brief. Default is 1 week but be flexible for candidates who need more time — check with Carla. HR is not present at the presentation."},
+  {stage:"Team / Cross-functional",duration:"Multiple sessions (optional)",owner:"You + Team",tip:"Optional stage — use it when broader perspective would help. Structured interviews only."},
+  {stage:"VP / Founder",duration:"30 min · Always last",owner:"VP/Founder",tip:"Always a separate, final interview session. Carla schedules this. Make sure the candidate is fully briefed before."},
+  {stage:"Background Check",duration:"Post-offer · All roles except interns",owner:"Carla",tip:"Auto-triggered in Certn on 'Offer Accepted' in Lever (OneID + SoftCheck™). US hires handled manually. Contract cannot be sent until Certn is cleared."},
+];
+const DOS_DONTS={
+  "✅ Do":["Show up on time for every interview","Review CV and scorecard beforehand","Log all feedback in Lever","Loop Carla in at every step","Be flexible on case study timing if needed","Encourage internal applicants first","Referral bonus applies only if the hire is NOT on your own team","Meet diverse candidates intentionally"],
+  "🚫 Don't":["Ghost or miss interviews","Make informal offers or salary promises","Ask about age, health, family, trade union, or political opinions","Share CVs or candidate info outside Lever","Give feedback without concrete examples","Send a contract before Certn background check is cleared","Hire without Carla's involvement"],
+};
+const COMPLIANCE=[
+  {icon:"🇪🇺",title:"GDPR (EU/EEA candidates)",items:["Candidate data stays in Lever only","AI screening disclosed before HR Interview","Reference check requires candidate consent","Conviction data deleted immediately after verification"]},
+  {icon:"🇬🇧",title:"UK GDPR",items:["Same principles as GDPR post-Brexit","Carla verifies before initiating Certn checks"]},
+  {icon:"🇺🇸",title:"USA (FCRA + state laws)",items:["Certn checks handled manually by Carla","No Lever→Certn auto-trigger for US candidates","\"Ban the box\" laws apply in many states"]},
+  {icon:"⚖️",title:"French Labour Law",items:["25 protected characteristics — never ask about them","Candidates can refuse background checks","Practical test refusal = process stops (legal right)"]},
+];
+const SLAS=[
+  {icon:"📝",action:"Submit feedback in Lever after an interview",sla:"Within 48 hours",color:"#6366f1",why:"Candidates are waiting. Late feedback = lost talent."},
+  {icon:"💬",action:"Respond to Carla when she asks for availability or input",sla:"Within 24 hours",color:"#10b981",why:"Carla can't move candidates forward without you."},
+  {icon:"👤",action:"Review & approve/reject a candidate profile shared by Carla",sla:"Within 48 hours",color:"#f59e0b",why:"Good candidates have options — every day counts."},
+];
+const QUICK_LINKS=[
+  {label:"Open a Position",icon:"📂",url:"https://www.notion.so/27ba859d703546d5a9668b5dcabc8d8b"},
+  {label:"Job Library",icon:"📚",url:"https://www.notion.so/7d1915b10c264b35a87147f321b1f95c"},
+  {label:"Interview Scorecards",icon:"🃏",url:"https://www.notion.so/3b217a919ad047ec8623dee46b89e809"},
+  {label:"Lever (ATS)",icon:"🔧",url:"https://www.notion.so/4412a32f7ea044b19a21e4ba48d587f4"},
+  {label:"Anti-Bias Guide",icon:"⚖️",url:"https://www.notion.so/16525166d20e4997b93049d47a537a82"},
+  {label:"Candidate Experience Guide",icon:"🗺️",url:"https://www.notion.so/3263937aad00814bbd2bfbdc10965338"},
+  {label:"Background Checking",icon:"🔍",url:"https://www.notion.so/06e51f5577954f55ad055317290b9b33"},
+  {label:"The No Go",icon:"⛔",url:"https://www.notion.so/1efaf0fcb98147fc856f2bef711cdfdf"},
+  {label:"Referral Program",icon:"🤝",url:"https://www.notion.so/16c3937aad00806fb65fde5bc2b73ceb"},
+  {label:"Manager HR Box",icon:"🧰",url:"https://www.notion.so/92946cd3b7d54ae19d60c3b279e63115"},
+];
+const TABS=["🗺️ Pipeline","✅ Checklists","🎤 Interview Prep","⚖️ Compliance","⏱️ SLAs","⚡ Quick Links"];
+
+function App(){
+  const[activeTab,setActiveTab]=useState(0);
+  const[checked,setChecked]=useState({});
+  const[activeStage,setActiveStage]=useState(null);
+  const toggle=(section,i)=>{const k=`${section}:${i}`;setChecked(p=>({...p,[k]:!p[k]}));};
+  const sectionDone=(section)=>CHECKLIST[section].filter((_,i)=>checked[`${section}:${i}`]).length;
+
+  return(
+    <div style={{fontFamily:"'Inter',system-ui,sans-serif",background:"#0f0f1a",minHeight:"100vh",color:"#e2e8f0"}}>
+      <div style={{background:"linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#1e1b4b 100%)",padding:"24px 28px 0",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
+          <span style={{fontSize:28}}>🧰</span>
+          <div>
+            <div style={{fontSize:20,fontWeight:700}}>Hiring Manager Cockpit</div>
+            <div style={{fontSize:12,color:"#a5b4fc",marginTop:1}}>Powered by your Didomi Manager HR Box · Contact <strong>Carla</strong> for anything recruitment-related 🙋‍♀️</div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:4,marginTop:16,flexWrap:"wrap"}}>
+          {TABS.map((t,i)=>(
+            <button key={i} onClick={()=>setActiveTab(i)} style={{padding:"8px 16px",borderRadius:"8px 8px 0 0",border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:activeTab===i?"#fff":"transparent",color:activeTab===i?"#312e81":"#a5b4fc"}}>
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{padding:"24px 28px",maxWidth:920}}>
+
+        {activeTab===0&&<div>
+          <p style={{color:"#94a3b8",fontSize:13,marginBottom:20}}>Didomi's full hiring funnel — click any stage for details.</p>
+          <div style={{display:"flex",gap:0,marginBottom:24,flexWrap:"wrap"}}>
+            {STAGES.map((s,i)=>(
+              <div key={s.id} style={{display:"flex",alignItems:"center"}}>
+                <div onClick={()=>setActiveStage(activeStage===s.id?null:s.id)} style={{cursor:"pointer",background:activeStage===s.id?s.color:"#1e1b4b",border:`2px solid ${s.color}`,borderRadius:10,padding:"10px 14px",textAlign:"center",minWidth:90,transition:"all .2s",transform:activeStage===s.id?"scale(1.05)":"scale(1)"}}>
+                  <div style={{fontSize:20}}>{s.icon}</div>
+                  <div style={{fontSize:11,fontWeight:600,marginTop:4,color:activeStage===s.id?"#fff":s.color}}>{s.label}</div>
+                  {s.optional&&<div style={{fontSize:9,color:activeStage===s.id?"rgba(255,255,255,0.7)":"#6b7280",fontStyle:"italic",marginTop:1}}>optional</div>}
+                </div>
+                {i<STAGES.length-1&&<div style={{color:"#4b5563",fontSize:18,margin:"0 2px"}}>→</div>}
+              </div>
+            ))}
+          </div>
+          {activeStage&&(()=>{
+            const s=STAGES.find(s=>s.id===activeStage);
+            const info=STAGE_INFO[activeStage];
+            return(<div style={{background:"#1a1a2e",border:`1px solid ${s.color}40`,borderLeft:`4px solid ${s.color}`,borderRadius:12,padding:20,marginBottom:20}}>
+              <div style={{fontSize:16,fontWeight:700,color:s.color,marginBottom:8}}>{s.icon} {info.title}</div>
+              <div style={{display:"flex",gap:20,marginBottom:12,flexWrap:"wrap"}}>
+                <span style={{fontSize:12,background:"#0f0f1a",padding:"3px 10px",borderRadius:20,color:"#94a3b8"}}>⏱ {info.duration}</span>
+                <span style={{fontSize:12,background:"#0f0f1a",padding:"3px 10px",borderRadius:20,color:"#94a3b8"}}>👤 {info.owner}</span>
+              </div>
+              <p style={{fontSize:14,color:"#cbd5e1",lineHeight:1.6,margin:0}}>{info.body}</p>
+            </div>);
+          })()}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+            {Object.entries(DOS_DONTS).map(([title,items])=>(
+              <div key={title} style={{background:"#1a1a2e",borderRadius:12,padding:18,border:"1px solid #2d2d4e"}}>
+                <div style={{fontSize:14,fontWeight:700,marginBottom:12,color:title.startsWith("✅")?"#10b981":"#ef4444"}}>{title}</div>
+                {items.map((item,i)=>(
+                  <div key={i} style={{fontSize:13,color:"#cbd5e1",padding:"4px 0",display:"flex",gap:8}}>
+                    <span style={{color:title.startsWith("✅")?"#10b981":"#ef4444",flexShrink:0}}>{title.startsWith("✅")?"•":"×"}</span>{item}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>}
+
+        {activeTab===1&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+          {Object.entries(CHECKLIST).map(([section,items])=>{
+            const done=sectionDone(section);
+            const pct=Math.round((done/items.length)*100);
+            return(<div key={section} style={{background:"#1a1a2e",borderRadius:12,padding:18,border:"1px solid #2d2d4e"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <div style={{fontSize:14,fontWeight:700}}>{section}</div>
+                <span style={{fontSize:12,color:pct===100?"#10b981":"#94a3b8",fontWeight:600}}>{done}/{items.length}</span>
+              </div>
+              <div style={{height:4,background:"#2d2d4e",borderRadius:4,marginBottom:14}}>
+                <div style={{height:"100%",borderRadius:4,background:pct===100?"#10b981":"#6366f1",width:`${pct}%`,transition:"width .3s"}}/>
+              </div>
+              {items.map((item,i)=>{
+                const k=`${section}:${i}`;
+                return(<div key={i} onClick={()=>toggle(section,i)} style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",padding:"5px 0"}}>
+                  <div style={{width:18,height:18,flexShrink:0,borderRadius:4,border:checked[k]?"none":"2px solid #4b5563",background:checked[k]?"#6366f1":"transparent",display:"flex",alignItems:"center",justifyContent:"center",marginTop:1}}>
+                    {checked[k]&&<span style={{color:"#fff",fontSize:11,fontWeight:700}}>✓</span>}
+                  </div>
+                  <span style={{fontSize:13,color:checked[k]?"#6b7280":"#cbd5e1",textDecoration:checked[k]?"line-through":"none",lineHeight:1.4}}>
+                    {item.text}{item.link&&<a href={item.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{marginLeft:6,color:"#818cf8",fontSize:11}}>↗</a>}
+                  </span>
+                </div>);
+              })}
+            </div>);
+          })}
+        </div>}
+
+        {activeTab===2&&<div>
+          <p style={{color:"#94a3b8",fontSize:13,marginBottom:20}}>Stage-by-stage guidance for running great interviews at Didomi.</p>
+          {INTERVIEW_TIPS.map((tip,i)=>(
+            <div key={i} style={{background:"#1a1a2e",borderRadius:12,padding:18,marginBottom:12,border:"1px solid #2d2d4e",display:"grid",gridTemplateColumns:"200px 1fr",gap:16,alignItems:"start"}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:"#a5b4fc",marginBottom:6}}>{tip.stage}</div>
+                <div style={{fontSize:12,color:"#64748b",marginBottom:4}}>⏱ {tip.duration}</div>
+                <div style={{fontSize:12,color:"#64748b"}}>👤 {tip.owner}</div>
+              </div>
+              <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.6,padding:"8px 12px",background:"#0f0f1a",borderRadius:8,borderLeft:"3px solid #6366f1"}}>{tip.tip}</div>
+            </div>
+          ))}
+          <div style={{background:"#1a1a2e",borderRadius:12,padding:18,border:"1px solid #f59e0b40",borderLeft:"4px solid #f59e0b",marginTop:8}}>
+            <div style={{fontWeight:700,color:"#f59e0b",marginBottom:12,fontSize:14}}>⚖️ Bias & Compliance Reminders</div>
+            {["Never ask about age, health, family, trade union, or political opinions","Avoid assumptions based on CV gaps, accents, home address or education","Use structured scorecard-based questions — same questions, same order","Keep all candidate data within Lever — no CVs shared outside the hiring team","Respect GDPR at all times — when in doubt, ask Carla"].map((r,i)=>(
+              <div key={i} style={{fontSize:13,color:"#fde68a",padding:"4px 0",display:"flex",gap:8}}><span>⚠</span>{r}</div>
+            ))}
+          </div>
+        </div>}
+
+        {activeTab===3&&<div>
+          <p style={{color:"#94a3b8",fontSize:13,marginBottom:20}}>Key compliance rules by jurisdiction — know what applies to your candidate.</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+            {COMPLIANCE.map((c,i)=>(
+              <div key={i} style={{background:"#1a1a2e",borderRadius:12,padding:18,border:"1px solid #2d2d4e"}}>
+                <div style={{fontSize:15,fontWeight:700,marginBottom:12}}>{c.icon} {c.title}</div>
+                {c.items.map((item,j)=>(
+                  <div key={j} style={{fontSize:13,color:"#cbd5e1",padding:"4px 0",display:"flex",gap:8}}><span style={{color:"#6366f1",flexShrink:0}}>•</span>{item}</div>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div style={{background:"#1a1a2e",borderRadius:12,padding:18,border:"1px solid #ef444440",borderLeft:"4px solid #ef4444"}}>
+            <div style={{fontWeight:700,color:"#ef4444",marginBottom:12,fontSize:14}}>🔍 Background Check Rules</div>
+            {["Mandatory for ALL roles except interns & apprentices","Auto-triggered in Certn on 'Offer Accepted' in Lever → OneID + SoftCheck™","US Base Criminal initiated manually by Carla for US-entity hires only","US-based candidates handled fully manually — no Lever→Certn automation","Contract cannot be sent until background check is cleared","Conviction data deleted immediately after verification","Annual re-checks apply to all employees in scope"].map((r,i)=>(
+              <div key={i} style={{fontSize:13,color:"#fca5a5",padding:"4px 0",display:"flex",gap:8}}><span>•</span>{r}</div>
+            ))}
+          </div>
+        </div>}
+
+        {activeTab===4&&<div>
+          <p style={{color:"#94a3b8",fontSize:13,marginBottom:20}}>As a hiring manager, these are your response time commitments.</p>
+          {SLAS.map((s,i)=>(
+            <div key={i} style={{background:"#1a1a2e",borderRadius:12,padding:20,marginBottom:12,border:`1px solid ${s.color}40`,borderLeft:`4px solid ${s.color}`,display:"grid",gridTemplateColumns:"1fr auto",gap:16,alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,marginBottom:6}}>{s.icon} {s.action}</div>
+                <div style={{fontSize:12,color:"#64748b",fontStyle:"italic"}}>{s.why}</div>
+              </div>
+              <div style={{background:s.color,borderRadius:20,padding:"6px 16px",fontSize:13,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>{s.sla}</div>
+            </div>
+          ))}
+          <div style={{background:"#1a1a2e",borderRadius:12,padding:18,border:"1px solid #2d2d4e",marginTop:8}}>
+            <div style={{fontWeight:700,color:"#a5b4fc",marginBottom:10,fontSize:14}}>💡 Why this matters</div>
+            <p style={{fontSize:13,color:"#94a3b8",lineHeight:1.6,margin:0}}>Time-to-hire and candidate satisfaction are directly impacted by how fast the hiring team moves between stages. A candidate who interviews on Monday and hears nothing by Thursday has already started looking elsewhere. Your promptness signals how Didomi operates as a company — make it count.</p>
+          </div>
+        </div>}
+
+        {activeTab===5&&<div>
+          <p style={{color:"#94a3b8",fontSize:13,marginBottom:20}}>Your most-used Notion pages, one click away.</p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:12}}>
+            {QUICK_LINKS.map((l,i)=>(
+              <a key={i} href={l.url} target="_blank" rel="noreferrer" style={{textDecoration:"none",background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",gap:12,color:"#e2e8f0"}}>
+                <span style={{fontSize:24}}>{l.icon}</span>
+                <span style={{fontSize:13,fontWeight:600}}>{l.label}</span>
+              </a>
+            ))}
+          </div>
+          <div style={{marginTop:24,background:"linear-gradient(135deg,#312e81,#1e1b4b)",borderRadius:14,padding:20,border:"1px solid #4338ca",display:"flex",gap:16,alignItems:"center"}}>
+            <span style={{fontSize:42}}>🙋‍♀️</span>
+            <div>
+              <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>Carla is your go-to for everything recruitment</div>
+              <div style={{fontSize:13,color:"#a5b4fc",lineHeight:1.6}}>
+                Opening roles · Kick-offs · Scheduling · Offer letters · Salary discussions · Reference checks · Background checks · GDPR questions<br/>
+                <strong style={{color:"#c7d2fe"}}>carla.chiocci@didomi.io</strong>
+              </div>
+            </div>
+          </div>
+        </div>}
+
+      </div>
+    </div>
+  );
+}
+ReactDOM.render(<App/>,document.getElementById('root'));
+</script>
+</body>
+</html>
